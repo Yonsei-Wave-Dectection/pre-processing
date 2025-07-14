@@ -460,7 +460,7 @@ print("Deeplearning preprocessing starts!")
 print("="*60)
 
 # ============================================================================
-# Step1. Data preparation and validation
+# Step1. Data preparation and validation (완전 수정 버전)
 # ============================================================================
 print("\n   Step1: Data preparation and validation")
 
@@ -469,68 +469,129 @@ print("Preprocessed seismic wave data:")
 for channel_name, data_info in final_processed_data.items():
     print(f"  🔸 {channel_name}: {data_info['length']} samples @ {data_info['sampling_rate']}Hz")
 
-# Check catalog data
-if 'catalog' in locals() and catalog is not None:
-    print(f"\nCatalog Data:")
-    print(f"  -> {len(catalog)} Earthquake events")
-    print(f"  -> Col ums: {list(catalog.columns)}")
-    if 'magnitude' in catalog.columns:
-        print(f"  -> Magnitude range: {catalog['magnitude'].min()} - {catalog['magnitude'].max()}")
-else:
-    print("⚠️ Catalog data loading required")
-    
-    # 실제 정답데이터 파일 읽기
-    try:
-        import pandas as pd
-        
-        # Excel 파일 읽기 (헤더는 2번째 행, 데이터는 4번째 행부터)
-        raw_catalog = pd.read_excel("Seoul_earthquake_current_state.csv", 
-                                   header=1, skiprows=[2])  # 2번째 행을 헤더로, 3번째 행 건너뛰기
-        
-        # 데이터 정리
-        # 유효한 데이터만 필터링 (number와 origin_time이 있는 행)
-        valid_mask = raw_catalog['number'].notna() & raw_catalog['origin_time'].notna()
-        catalog_clean = raw_catalog[valid_mask].copy()
-        
-        # 위도/경도 문자열 처리 ("36.85 N" -> 36.85)
-        if 'latitude' in catalog_clean.columns:
-            catalog_clean['latitude'] = catalog_clean['latitude'].astype(str).str.replace(' N', '').str.replace(' S', '').astype(float)
-        if 'longitude' in catalog_clean.columns:
-            catalog_clean['longitude'] = catalog_clean['longitude'].astype(str).str.replace(' E', '').str.replace(' W', '').astype(float)
-        
-        # origin_time을 datetime으로 변환 (Excel 숫자를 날짜로)
-        # Excel의 숫자 날짜를 pandas datetime으로 변환
-        catalog_clean['origin_time'] = pd.to_datetime(catalog_clean['origin_time'], origin='1899-12-30', unit='D')
-        
-        # 최종 카탈로그
-        catalog = catalog_clean.reset_index(drop=True)
-        
-        print(f"✅ 정답데이터 로딩 완료!")
-        print(f"  -> 총 {len(catalog)}개 지진 이벤트")
-        print(f"  -> 컬럼: {list(catalog.columns)}")
-        print(f"  -> 규모 범위: {catalog['magnitude'].min():.1f} - {catalog['magnitude'].max():.1f}")
-        print(f"  -> 위치 범위:")
-        print(f"    위도: {catalog['latitude'].min():.2f}°N - {catalog['latitude'].max():.2f}°N")
-        print(f"    경도: {catalog['longitude'].min():.2f}°E - {catalog['longitude'].max():.2f}°E")
-        print(f"  -> 시간 범위: {catalog['origin_time'].min()} ~ {catalog['origin_time'].max()}")
-        
-        print(f"\n첫 3개 이벤트:")
-        print(catalog[['number', 'origin_time', 'magnitude', 'depth', 'latitude', 'longitude', 'location']].head(3))
-        
-    except Exception as e:
-        print(f"❌ 정답데이터 로딩 실패: {str(e)}")
-        # 기본 테스트 데이터 생성
-        catalog = pd.DataFrame({
-            'number': [1, 2],
-            'origin_time': pd.to_datetime(['2022-01-01T10:00:00', '2022-01-02T15:30:00']),
-            'magnitude': [2.7, 3.5],
-            'depth': [10.0, 8.0],
-            'latitude': [36.123, 36.789],
-            'longitude': [127.456, 128.123],
-            'location': ['테스트 지역 1', '테스트 지역 2']
-        })
-        print(f"  -> 테스트 데이터 생성: {len(catalog)}개 이벤트")
+# CSV 파일 구조 문제 해결
+print("🔧 CSV 카탈로그 로딩 및 정리...")
 
+try:
+    # 원본 CSV 파일 로딩
+    raw_catalog = pd.read_csv("outCountryEarthquakeList_2000-01-01_2025-07-04.csv")
+    
+    print(f"📋 원본 CSV 구조 확인:")
+    print(f"  -> 총 행수: {len(raw_catalog)}")
+    print(f"  -> 컬럼들: {list(raw_catalog.columns)}")
+    
+    # 첫 5행 내용 확인
+    print("📊 첫 5행 내용:")
+    for i in range(min(5, len(raw_catalog))):
+        print(f"  행 {i}: {raw_catalog.iloc[i, 0]}")
+    
+    # 실제 데이터가 시작하는 행 찾기
+    data_start_row = None
+    for i in range(len(raw_catalog)):
+        first_col = str(raw_catalog.iloc[i, 0])
+        # 숫자로 시작하는 행 찾기 (실제 데이터)
+        if first_col.isdigit():
+            data_start_row = i
+            break
+    
+    if data_start_row is not None:
+        print(f"✅ 실제 데이터 시작 행: {data_start_row}")
+        
+        # 헤더를 data_start_row-1로, 데이터를 data_start_row부터
+        if data_start_row > 0:
+            catalog_df = pd.read_csv("outCountryEarthquakeList_2000-01-01_2025-07-04.csv", 
+                                   header=data_start_row-1, 
+                                   skiprows=range(0, data_start_row-1))
+        else:
+            catalog_df = raw_catalog
+    else:
+        # 헤더가 명확하지 않으면 수동으로 설정
+        print("⚠️ 데이터 시작 행을 찾을 수 없음 - 수동 처리")
+        catalog_df = raw_catalog.iloc[2:].copy()  # 3행부터 데이터로 가정
+        
+        # 컬럼명 수동 설정
+        expected_columns = ['number', 'origin_time', 'magnitude', 'depth', 
+                           'latitude', 'longitude', 'location', 'map_link']
+        catalog_df.columns = expected_columns[:len(catalog_df.columns)]
+    
+    print(f"📊 정리된 컬럼들: {list(catalog_df.columns)}")
+    
+    # 유효한 데이터만 필터링
+    # 첫 번째 컬럼이 숫자인 행만 선택
+    if len(catalog_df.columns) > 0:
+        first_col_name = catalog_df.columns[0]
+        # 숫자로 변환 가능한 행만 선택
+        numeric_mask = pd.to_numeric(catalog_df[first_col_name], errors='coerce').notna()
+        catalog_clean = catalog_df[numeric_mask].copy()
+        
+        # 컬럼명이 이상하면 표준 이름으로 변경
+        if 'magnitude' not in catalog_clean.columns:
+            column_mapping = {}
+            cols = list(catalog_clean.columns)
+            
+            # 예상 순서에 따라 매핑
+            standard_names = ['number', 'origin_time', 'magnitude', 'depth', 
+                             'latitude', 'longitude', 'location']
+            
+            for i, std_name in enumerate(standard_names):
+                if i < len(cols):
+                    column_mapping[cols[i]] = std_name
+            
+            catalog_clean = catalog_clean.rename(columns=column_mapping)
+            print(f"🔄 컬럼명 변경 완료: {column_mapping}")
+        
+        # 숫자 컬럼들 타입 변환
+        numeric_columns = ['magnitude', 'depth', 'latitude', 'longitude']
+        for col in numeric_columns:
+            if col in catalog_clean.columns:
+                catalog_clean[col] = pd.to_numeric(catalog_clean[col], errors='coerce')
+        
+        # 유효한 magnitude가 있는 행만 선택
+        if 'magnitude' in catalog_clean.columns:
+            valid_magnitude_mask = catalog_clean['magnitude'].notna()
+            catalog = catalog_clean[valid_magnitude_mask].reset_index(drop=True)
+        else:
+            catalog = catalog_clean.reset_index(drop=True)
+        
+        print(f"✅ 카탈로그 정리 완료: {len(catalog)}개 유효 이벤트")
+        
+        if len(catalog) > 0:
+            print(f"📊 카탈로그 정보:")
+            print(f"  -> 컬럼들: {list(catalog.columns)}")
+            if 'magnitude' in catalog.columns:
+                valid_mag = catalog['magnitude'].dropna()
+                if len(valid_mag) > 0:
+                    print(f"  -> 규모 범위: {valid_mag.min():.1f} - {valid_mag.max():.1f}")
+            
+            print(f"📋 첫 3개 이벤트:")
+            display_cols = [col for col in ['number', 'magnitude', 'depth', 'latitude', 'longitude'] 
+                          if col in catalog.columns]
+            if display_cols:
+                print(catalog[display_cols].head(3))
+    
+    else:
+        raise ValueError("컬럼이 없습니다")
+
+except Exception as e:
+    print(f"❌ CSV 처리 실패: {str(e)}")
+    print("🔧 대안: 풍부한 테스트 데이터 생성")
+    
+    # 충분한 테스트 데이터 생성 (100개)
+    np.random.seed(42)
+    n_events = 100
+    
+    catalog = pd.DataFrame({
+        'number': list(range(1, n_events + 1)),
+        'origin_time': pd.date_range('2020-01-01', periods=n_events, freq='6H'),
+        'magnitude': np.random.uniform(2.0, 6.0, n_events),
+        'depth': np.random.uniform(5.0, 50.0, n_events),
+        'latitude': np.random.uniform(35.0, 39.0, n_events),
+        'longitude': np.random.uniform(125.0, 130.0, n_events),
+        'location': [f'한반도 지역 {i}' for i in range(1, n_events + 1)]
+    })
+    
+    print(f"✅ 테스트 데이터 생성: {len(catalog)}개 이벤트")
+    print(f"  -> 규모 범위: {catalog['magnitude'].min():.1f} - {catalog['magnitude'].max():.1f}")
 
 # ============================================================================
 # 2단계: 3-channel data combination
@@ -562,7 +623,6 @@ if len(combined_channels) == 3:
 else:
     print("❌ 3-channel combining Failed")
     combined_data = None
-
 
 # ============================================================================
 # Step3: Time-based windowing
@@ -699,7 +759,6 @@ else:
         print(f"  -> Window shape: {event_windows[0].shape}")
         print(f"  -> Total shape: {event_windows.shape}")
 
-
 # ============================================================================
 #  Step4: Create a background noise window (non-earthquake region)
 # ============================================================================
@@ -758,7 +817,6 @@ if combined_data is not None:
     if len(background_windows) > 0:
         print(f"  📊 Window shape: {background_windows[0].shape}")
 
-
 # ============================================================================
 # Step5: Create data pairs for noise removal
 # ============================================================================
@@ -815,7 +873,6 @@ if 'event_windows' in locals() and len(event_windows) > 0:
     print(f"    Noisy std: {np.std(noisy_data):.4f}")
     print(f"    Noise ratio: {(np.std(noisy_data) - np.std(clean_data))/np.std(clean_data)*100:.1f}%")
 
-
 # ============================================================================
 # Step6: Final normalization and data construction
 # ============================================================================
@@ -851,7 +908,6 @@ if 'noisy_data' in locals() and 'clean_data' in locals():
     print(f"    Standard deviation: {norm_stats['scale']:.6f}")
     print(f"    Range after normalization: {normalized_noisy.min():.3f} ~ {normalized_noisy.max():.3f}")
 
-
 # ============================================================================
 # Step7: Split train/validation data
 # ============================================================================
@@ -861,13 +917,46 @@ def split_dataset(X, y, train_ratio=0.7, val_ratio=0.2, test_ratio=0.1):
     """Split train/validation data"""
     
     total_samples = len(X)
+    print(f"  📊 Total samples: {total_samples}")
     
-    # Shuffle indices
+    # 최소 샘플 수 보장
+    if total_samples < 3:
+        print(f"  ⚠️ Too few samples ({total_samples}) for proper split")
+        print(f"  🔧 Applying emergency split strategy")
+        
+        if total_samples == 1:
+            # 1개뿐이면 모두 train에
+            return {
+                'train': {'X': X, 'y': y, 'indices': np.array([0])},
+                'val': {'X': X[:0], 'y': y[:0], 'indices': np.array([])},
+                'test': {'X': X[:0], 'y': y[:0], 'indices': np.array([])}
+            }
+        elif total_samples == 2:
+            # 2개면 train 1개, val 1개, test 0개
+            indices = np.random.permutation(total_samples)
+            return {
+                'train': {'X': X[indices[:1]], 'y': y[indices[:1]], 'indices': indices[:1]},
+                'val': {'X': X[indices[1:2]], 'y': y[indices[1:2]], 'indices': indices[1:2]},
+                'test': {'X': X[:0], 'y': y[:0], 'indices': np.array([])}
+            }
+    
+    # 정상적인 경우 (3개 이상)
     indices = np.random.permutation(total_samples)
     
-    # Split point calculation (분할 지점 계산)
-    train_end = int(total_samples * train_ratio)
-    val_end = int(total_samples * (train_ratio + val_ratio))
+    # 최소 1개씩 보장하면서 분할
+    min_val_samples = max(1, int(total_samples * val_ratio))
+    min_test_samples = max(1, int(total_samples * test_ratio))
+    min_train_samples = total_samples - min_val_samples - min_test_samples
+    
+    # 음수가 되는 경우 조정
+    if min_train_samples < 1:
+        min_train_samples = 1
+        min_val_samples = (total_samples - 1) // 2
+        min_test_samples = total_samples - min_train_samples - min_val_samples
+    
+    # 분할 지점 계산
+    train_end = min_train_samples
+    val_end = train_end + min_val_samples
     
     # Split
     train_idx = indices[:train_end]
@@ -893,7 +982,6 @@ if 'normalized_noisy' in locals() and 'normalized_clean' in locals():
         print(f"  📊 {split_name.upper()}: {len(split_data['X'])} samples")
         print(f"    X shape: {split_data['X'].shape}")
         print(f"    y shape: {split_data['y'].shape}")
-
 
 # ============================================================================
 # Summary of final results
@@ -922,7 +1010,6 @@ else:
     print(f"❌ Some steps Failed - Debugging required")
 
 print(f"\n✅ Deeplearning preprocessing completed!")
-
 
 
 
