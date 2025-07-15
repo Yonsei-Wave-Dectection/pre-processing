@@ -460,7 +460,7 @@ print("Deeplearning preprocessing starts!")
 print("="*60)
 
 # ============================================================================
-# Step1. Data preparation and validation (완전 수정 버전)
+# Step1. Data preparation and validation
 # ============================================================================
 print("\n   Step1: Data preparation and validation")
 
@@ -469,6 +469,38 @@ print("Preprocessed seismic wave data:")
 for channel_name, data_info in final_processed_data.items():
     print(f"  🔸 {channel_name}: {data_info['length']} samples @ {data_info['sampling_rate']}Hz")
 
+# 위도/경도 파싱 함수
+def parse_coordinate(coord_str):
+    """위도/경도 문자열을 숫자로 변환"""
+    try:
+        if pd.isna(coord_str) or coord_str == '':
+            return None
+            
+        coord_str = str(coord_str).strip()
+        
+        # 숫자와 방향 분리
+        import re
+        match = re.match(r'([0-9.]+)\s*([NSEW])', coord_str)
+        
+        if match:
+            value = float(match.group(1))
+            direction = match.group(2).upper()
+            
+            # 남쪽(S)과 서쪽(W)은 음수
+            if direction in ['S', 'W']:
+                value = -value
+                
+            return value
+        else:
+            # 순수 숫자인 경우
+            try:
+                return float(coord_str)
+            except:
+                return None
+    except Exception as e:
+        print(f"    ⚠️ 좌표 파싱 오류: {coord_str} -> {str(e)}")
+        return None
+    
 # CSV 파일 구조 문제 해결
 print("🔧 CSV 카탈로그 로딩 및 정리...")
 
@@ -507,11 +539,11 @@ try:
     else:
         # 헤더가 명확하지 않으면 수동으로 설정
         print("⚠️ 데이터 시작 행을 찾을 수 없음 - 수동 처리")
-        catalog_df = raw_catalog.iloc[2:].copy()  # 3행부터 데이터로 가정
+        catalog_df = raw_catalog.iloc[2:].copy()  # 3행부터 데이터
         
         # 컬럼명 수동 설정
-        expected_columns = ['number', 'origin_time', 'magnitude', 'depth', 
-                           'latitude', 'longitude', 'location', 'map_link']
+        expected_columns = ['number', 'magnitude', 'depth', 
+                           'latitude', 'longitude', 'location']
         catalog_df.columns = expected_columns[:len(catalog_df.columns)]
     
     print(f"📊 정리된 컬럼들: {list(catalog_df.columns)}")
@@ -530,7 +562,7 @@ try:
             cols = list(catalog_clean.columns)
             
             # 예상 순서에 따라 매핑
-            standard_names = ['number', 'origin_time', 'magnitude', 'depth', 
+            standard_names = ['number', 'magnitude', 'depth', 
                              'latitude', 'longitude', 'location']
             
             for i, std_name in enumerate(standard_names):
@@ -540,8 +572,27 @@ try:
             catalog_clean = catalog_clean.rename(columns=column_mapping)
             print(f"🔄 컬럼명 변경 완료: {column_mapping}")
         
+        # 위도/경도 특별 처리
+        print("🌍 위도/경도 파싱 중...")
+        
+        if 'latitude' in catalog_clean.columns:
+            print(f"  📊 위도 샘플: {catalog_clean['latitude'].head(3).tolist()}")
+            catalog_clean['latitude'] = catalog_clean['latitude'].apply(parse_coordinate)
+            valid_lat = catalog_clean['latitude'].dropna()
+            print(f"  ✅ 위도 파싱 완료: {len(valid_lat)}개 성공")
+            if len(valid_lat) > 0:
+                print(f"      범위: {valid_lat.min():.2f}° ~ {valid_lat.max():.2f}°")
+        
+        if 'longitude' in catalog_clean.columns:
+            print(f"  📊 경도 샘플: {catalog_clean['longitude'].head(3).tolist()}")
+            catalog_clean['longitude'] = catalog_clean['longitude'].apply(parse_coordinate)
+            valid_lon = catalog_clean['longitude'].dropna()
+            print(f"  ✅ 경도 파싱 완료: {len(valid_lon)}개 성공")
+            if len(valid_lon) > 0:
+                print(f"      범위: {valid_lon.min():.2f}° ~ {valid_lon.max():.2f}°")
+
         # 숫자 컬럼들 타입 변환
-        numeric_columns = ['magnitude', 'depth', 'latitude', 'longitude']
+        numeric_columns = ['magnitude', 'depth']
         for col in numeric_columns:
             if col in catalog_clean.columns:
                 catalog_clean[col] = pd.to_numeric(catalog_clean[col], errors='coerce')
@@ -563,35 +614,32 @@ try:
                 if len(valid_mag) > 0:
                     print(f"  -> 규모 범위: {valid_mag.min():.1f} - {valid_mag.max():.1f}")
             
+            if 'latitude' in catalog.columns and 'longitude' in catalog.columns:
+                valid_coords = catalog[['latitude', 'longitude']].dropna()
+                if len(valid_coords) > 0:
+                    print(f"  -> 위치 범위:")
+                    print(f"      위도: {valid_coords['latitude'].min():.2f}° ~ {valid_coords['latitude'].max():.2f}°")
+                    print(f"      경도: {valid_coords['longitude'].min():.2f}° ~ {valid_coords['longitude'].max():.2f}°")
+            
             print(f"📋 첫 3개 이벤트:")
             display_cols = [col for col in ['number', 'magnitude', 'depth', 'latitude', 'longitude'] 
                           if col in catalog.columns]
             if display_cols:
-                print(catalog[display_cols].head(3))
+                first_3 = catalog[display_cols].head(3)
+                print(first_3)
+                
+                # 좌표 값 상세 확인
+                print(f"\n🔍 좌표 상세 정보:")
+                for i in range(min(3, len(catalog))):
+                    lat = catalog.iloc[i]['latitude'] if 'latitude' in catalog.columns else None
+                    lon = catalog.iloc[i]['longitude'] if 'longitude' in catalog.columns else None
+                    print(f"  이벤트 {i+1}: 위도={lat}, 경도={lon}")
     
     else:
         raise ValueError("컬럼이 없습니다")
 
 except Exception as e:
     print(f"❌ CSV 처리 실패: {str(e)}")
-    print("🔧 대안: 풍부한 테스트 데이터 생성")
-    
-    # 충분한 테스트 데이터 생성 (100개)
-    np.random.seed(42)
-    n_events = 100
-    
-    catalog = pd.DataFrame({
-        'number': list(range(1, n_events + 1)),
-        'origin_time': pd.date_range('2020-01-01', periods=n_events, freq='6H'),
-        'magnitude': np.random.uniform(2.0, 6.0, n_events),
-        'depth': np.random.uniform(5.0, 50.0, n_events),
-        'latitude': np.random.uniform(35.0, 39.0, n_events),
-        'longitude': np.random.uniform(125.0, 130.0, n_events),
-        'location': [f'한반도 지역 {i}' for i in range(1, n_events + 1)]
-    })
-    
-    print(f"✅ 테스트 데이터 생성: {len(catalog)}개 이벤트")
-    print(f"  -> 규모 범위: {catalog['magnitude'].min():.1f} - {catalog['magnitude'].max():.1f}")
 
 # ============================================================================
 # 2단계: 3-channel data combination
@@ -1013,14 +1061,12 @@ print(f"\n✅ Deeplearning preprocessing completed!")
 
 
 
-print("Result data file saving starts!")
-print("="*60)
 
 import pandas as pd
 import numpy as np
 
-print("📋 딥러닝 전처리 결과를 CSV로 저장")
-print("="*50)
+print("Result data file saving starts!")
+print("="*60)
 
 def save_earthquake_data_to_csv(dataset):
     """딥러닝 전처리된 지진파 데이터를 CSV로 저장"""
