@@ -30,7 +30,7 @@ for file_path in sorted(glob(os.path.join(data_dir, "*.mseed"))):
         for tr in st_filtered:
             tr.detrend(type='demean') # 1. DC offset Removal
             tr.taper(max_percentage=0.2, type='cosine') # 2. Cosine Taper (20%)
-            tr.filter("bandpass", freqmin=0.05, freqmax=20.0, corners=2, zerophase=True) # Bandpass Filter(0.05Hz ~ 20.0Hz)
+            tr.filter("bandpass", freqmin=0.05, freqmax=15.0, corners=2, zerophase=True) # Bandpass Filter(0.05Hz ~ 15.0Hz)
 
         # === 4. Save CSV (Save as KST Time String) ===
         for tr in st_filtered:
