@@ -78,7 +78,7 @@ This folder contains visualization images showing the **before and after** of th
 > 📌 These visualizations help validate and understand the effect of each preprocessing step.
 
 
-## 4. Data Resource
+## 6. Data Resource
 
 * The dataset is sourced from the **K-ESM (KIGAM Engineering Strong Motion) DB** on the **Geo Big Data Open Platform**
   ([https://data.kigam.re.kr/quake/data/kesmdb](https://data.kigam.re.kr/quake/data/kesmdb)).
@@ -95,7 +95,7 @@ This folder contains visualization images showing the **before and after** of th
 
 ---
 
-## 5. Sample Data Analysis
+## 7. Sample Data Analysis
 
 * **File**: `KMA20230026_KG.BOG..HG.raw.mseed`
 * **Channels**: 3
@@ -108,7 +108,7 @@ This folder contains visualization images showing the **before and after** of th
 
 ---
 
-## 6. Dataset Summary
+## 8. Dataset Summary
 
 | Attribute                  | Value            |
 | -------------------------- | ---------------- |
@@ -120,7 +120,7 @@ This folder contains visualization images showing the **before and after** of th
 
 ---
 
-## 7. Seismic Station Classification
+## 9. Seismic Station Classification
 
 | Station Code | Location |   | Station Code | Location |
 | ------------ | -------- | - | ------------ | -------- |
