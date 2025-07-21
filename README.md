@@ -66,9 +66,9 @@ Due to file size limitations, the data has been split into multiple compressed `
 
 Each subset contains the following number of files:
 
-* **Train**: 1,368 files (≈70%)
-* **Validation**: 195 files (≈10%)
-* **Test**: 390 files (≈20%)
+* **Train**: 1,368 files (70%)
+* **Validation**: 195 files (10%)
+* **Test**: 390 files (20%)
 
 > ⚠️ Note:
 > The division into multiple zip files per split is solely due to upload size restrictions.
