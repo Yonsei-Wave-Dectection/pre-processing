@@ -52,15 +52,27 @@ This script demonstrates the preprocessing pipeline using a sample dataset:
 
 To preprocess all 651 data files, use **`pre-processing_final.py`**.
 
+---
 
 ## 4. \[`pre-processed_data`] Folder Description
 
-This folder contains the final **preprocessed data**.
+This folder contains the final **preprocessed data**, organized into training, validation, and test sets.
 
-Due to file size limitations, the data has been **split into 13 compressed files (.zip)**.
+Due to file size limitations, the data has been split into multiple compressed `.zip` files:
 
-* Please **download and extract all 13 files**.
-* After extraction, **merge the contents** to use them as input for the deep learning model.
+* **Train**: 9 zip files
+* **Validation**: 2 zip files
+* **Test**: 3 zip files
+
+Each subset contains the following number of files:
+
+* **Train**: 1,368 files (≈70%)
+* **Validation**: 195 files (≈10%)
+* **Test**: 390 files (≈20%)
+
+> ⚠️ Note:
+> The division into multiple zip files per split is solely due to upload size restrictions.
+> Please **extract and merge** the zip files within each split (train/val/test) before using them as input for your deep learning model.
 
 ---
 
