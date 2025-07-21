@@ -52,7 +52,31 @@ This script demonstrates the preprocessing pipeline using a sample dataset:
 
 To preprocess all 651 data files, use **`pre-processing_final.py`**.
 
+
+## 4. \[`pre-processed_data`] Folder Description
+
+This folder contains the final **preprocessed data**.
+
+Due to file size limitations, the data has been **split into 13 compressed files (.zip)**.
+
+* Please **download and extract all 13 files**.
+* After extraction, **merge the contents** to use them as input for the deep learning model.
+
 ---
+
+## 5. \[`plot_images`] Folder Description
+
+This folder contains visualization images showing the **before and after** of the preprocessing steps, using the sample data:
+`KMA20230026_KG.BOG..HG.raw.mseed`
+
+| File Name                 | Description                                                                                         |
+| ------------------------- | --------------------------------------------------------------------------------------------------- |
+| `sample.png`              | Raw 3-channel (HGZ, HGN, HGE) waveform before preprocessing                                         |
+| `sample_fft.png`          | Frequency-power spectrum graph after **DC offset removal** (used to inspect frequency distribution) |
+| `sample_preprocessed.png` | Preprocessed 3-channel waveform. Raw and processed waveforms are **overlaid** for clear comparison  |
+
+> 📌 These visualizations help validate and understand the effect of each preprocessing step.
+
 
 ## 4. Data Resource
 
